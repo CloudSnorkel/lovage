@@ -1,0 +1,1 @@
+include lovage/backends/awslambda/helpers/*.py

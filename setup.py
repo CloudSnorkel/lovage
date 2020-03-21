@@ -31,7 +31,7 @@ setuptools.setup(
     author_email="amir@cloudsnorkel.com",
     url="https://github.com/CloudSnorkel/lovage",
     license="MIT",
-    packages=["lovage"],
+    packages=setuptools.find_packages(),
     package_data={"lovage": ["backends/awslambda/helpers/*.py"]},
     include_package_data=True,
     zip_safe=True,
