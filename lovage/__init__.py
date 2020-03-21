@@ -1,8 +1,15 @@
 import functools
 import os
 
+import pkg_resources
+
 import lovage.backends
 import lovage.backends.base
+
+try:
+    __version__ = pkg_resources.get_distribution('lovage').version
+except pkg_resources.DistributionNotFound:
+    __version__ = '0.0.0'
 
 
 class Lovage(object):

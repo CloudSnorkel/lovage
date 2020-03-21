@@ -98,19 +98,19 @@ class AwsLambdaBackend(base.Backend):
                     zip_path = os.path.relpath(local_path, '.')
                     z.add_file(local_path, zip_path)
 
-            try:
-                from lovage import __version__ as lovage_version
+            from lovage import __version__ as lovage_version
+            if lovage_version != "0.0.0":
                 # prepend requirements to allow user to override
-                requirements.insert(0, f"lovage-{lovage_version}]")
-            except ImportError:
+                requirements.insert(0, f"lovage=={lovage_version}")
+            else:
                 print("Unable to find Lovage version, using local files (can happen while developing Lovage)")
                 # lovage dependencies
                 requirements.insert(0, "troposphere")
                 requirements.insert(1, "globster==0.1.0")
-                
+
                 import lovage
                 lovage_dir = os.path.dirname(os.path.dirname(lovage.__file__))
-                
+
                 for root, folders, files in os.walk(lovage_dir):
                     for f in files:
                         local_path = os.path.join(root, f)
