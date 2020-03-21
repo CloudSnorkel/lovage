@@ -36,6 +36,7 @@ setuptools.setup(
     include_package_data=True,
     zip_safe=True,
     python_requires=">=3.6",
+    setup_requires=["wheel"],
     install_requires=[
         # TODO auto sync with pipenv?
         "boto3",
