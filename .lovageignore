@@ -1,0 +1,9 @@
+/.git
+/.idea
+/build
+/dist
+/lovage-*
+/*.egg-info
+Pipfile*
+*.md
+/setup*

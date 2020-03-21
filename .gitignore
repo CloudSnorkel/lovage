@@ -1,0 +1,7 @@
+*.pyc
+__pycache__
+/dist
+/lovage-*
+/lovage.egg-info
+/build
+/.idea
