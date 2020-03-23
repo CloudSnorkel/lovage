@@ -13,9 +13,6 @@ import troposphere.iam
 import troposphere.logs
 import troposphere.s3
 
-# handle python version
-# TODO share boto3 session and use profile name if needed
-
 REQUIREMENTS_LAYER_PACKAGER_CODE = pkgutil.get_data('lovage', 'backends/awslambda/helpers/packager.py').decode('utf-8')
 CODE_DELETER_CODE = pkgutil.get_data('lovage', 'backends/awslambda/helpers/deleter.py').decode('utf-8')
 assert REQUIREMENTS_LAYER_PACKAGER_CODE and CODE_DELETER_CODE
@@ -135,7 +132,22 @@ class CodePackage(troposphere.cloudformation.AWSCustomObject):
     }
 
 
-def _add_code(template, bucket, code_key):
+class TemplateFile(troposphere.cloudformation.AWSCustomObject):
+    resource_type = "Custom::TemplateFile"
+
+    props = {
+        'ServiceToken': (str, True),
+    }
+
+
+def _stub_template():
+    template = troposphere.Template()
+
+    bucket = troposphere.s3.Bucket(
+        "LovageBucket",
+        template
+    )
+
     code_deleter = _add_str_lambda(
         template,
         "CodeDeleter",
@@ -151,7 +163,10 @@ def _add_code(template, bucket, code_key):
                             "Action": [
                                 "s3:DeleteObject",
                             ],
-                            "Resource": troposphere.Sub("${LovageBucket.Arn}/code-*.zip"),
+                            "Resource": [
+                                troposphere.Sub("${LovageBucket.Arn}/code-*.zip"),
+                                troposphere.Sub("${LovageBucket.Arn}/template.yml"),
+                            ],
                         },
                     ]
                 }
@@ -165,27 +180,18 @@ def _add_code(template, bucket, code_key):
         Description="Deletes code packages from bucket so bucket can be easily deleted",
     )
 
-    return CodePackage(
-        "CodePackage",
+    TemplateFile(
+        "LovageCfTemplate",
         template,
         ServiceToken=code_deleter.get_att("Arn"),
-        Key=code_key,
+        Key="template.yml",
     )
 
-
-def _stub_template():
-    template = troposphere.Template()
-
-    bucket = troposphere.s3.Bucket(
-        "LovageBucket",
-        template
-    )
-
-    return bucket, template
+    return bucket, code_deleter, template
 
 
 def generate_stub_template():
-    _, template = _stub_template()
+    _, _, template = _stub_template()
     return template.to_yaml(clean_up=True, long_form=True)
 
 
@@ -194,7 +200,7 @@ def generate_template(stack_name: str, bucket_name: str, code_key: str, requirem
                       resources: typing.Sequence[troposphere.BaseAWSObject],
                       env: typing.Dict[str, object],
                       policies: typing.Sequence):
-    bucket, template = _stub_template()
+    bucket, code_deleter, template = _stub_template()
 
     packager = _add_str_lambda(
         template,
@@ -246,7 +252,12 @@ def generate_template(stack_name: str, bucket_name: str, code_key: str, requirem
         )
     )
 
-    code = _add_code(template, bucket, code_key)
+    code = CodePackage(
+        "CodePackage",
+        template,
+        ServiceToken=code_deleter.get_att("Arn"),
+        Key=code_key,
+    )
 
     for f in functions:
         lf = _add_codezip_lambda(
@@ -284,7 +295,7 @@ def _stack_exists(cf, name):
 
 
 @contextlib.contextmanager
-def _code_uploader(bucket, code_bytes):
+def _code_uploader(session, bucket, code_bytes):
     print("Uploading code...")
 
     code_hash = hashlib.md5(code_bytes).hexdigest()
@@ -292,7 +303,7 @@ def _code_uploader(bucket, code_bytes):
 
     delete_on_failure = False
 
-    s3 = boto3.client('s3')
+    s3 = session.client("s3")
 
     try:
         s3.head_object(Bucket=bucket, Key=code_key)
@@ -336,7 +347,7 @@ def wait_and_log(cf, waiter, stack_name):
                     if not event["ResourceStatusReason"]:
                         # empty error
                         continue
-                    if event["ResourceStatusReason"] == "Resource update cancelled":
+                    if event["ResourceStatusReason"] in ["Resource creation cancelled", "Resource update cancelled"]:
                         # this "error" doesn't help debugging
                         continue
                     reason += "\n  %(LogicalResourceId)s | %(ResourceStatus)s | %(ResourceStatusReason)s" % event
@@ -361,6 +372,7 @@ def deploy(session: boto3.Session, stack_name: str, code_bytes: bytes, requireme
                     "Value": "true",  # TODO version?
                 },
             ],
+            Capabilities=["CAPABILITY_IAM"],
         )
 
         wait_and_log(cf, "stack_create_complete", stack_name)
@@ -375,12 +387,15 @@ def deploy(session: boto3.Session, stack_name: str, code_bytes: bytes, requireme
         StackName=stack_name, LogicalResourceId="LovageBucket")["StackResourceDetail"]["PhysicalResourceId"]
 
     try:
-        with _code_uploader(bucket, code_bytes) as code_key:
+        with _code_uploader(session, bucket, code_bytes) as code_key:
+            print("Uploading template...")
+            tmpl = generate_template(stack_name, bucket, code_key, requirements, functions, resources, env, policies)
+            session.client("s3").put_object(Body=tmpl, Bucket=bucket, Key="template.yml", ContentType="text/yaml")
+
             print("Updating stack...")
             cf.update_stack(
                 StackName=stack_name,
-                TemplateBody=generate_template(stack_name, bucket, code_key, requirements,
-                                               functions, resources, env, policies),
+                TemplateURL=f"https://s3.amazonaws.com/{bucket}/template.yml",
                 Capabilities=["CAPABILITY_IAM"],
                 Parameters=[],
             )

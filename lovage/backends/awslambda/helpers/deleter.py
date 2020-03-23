@@ -18,7 +18,15 @@ def handler(event, context):
         elif event["RequestType"] == "Delete":
             print(f"Deleting s3://{bucket}/{key}")
 
-            boto3.client('s3').delete_object(Bucket=bucket, Key=key)
+            try:
+                boto3.client("s3").delete_object(Bucket=bucket, Key=key)
+            except botocore.exceptions.ClientError:
+                print(f"Error deleting {key}")
+                try:
+                    traceback.print_last()
+                except ValueError:
+                    print("Caught exception but unable to print stack trace")
+                    print(e)
 
         result = {"Bucket": bucket, "Key": key}
         cfnresponse.send(event, context, cfnresponse.SUCCESS, result, key)
