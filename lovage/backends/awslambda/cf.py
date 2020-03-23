@@ -150,7 +150,7 @@ def _stub_template():
 
     code_deleter = _add_str_lambda(
         template,
-        "CodeDeleter",
+        "LovageCodeDeleter",
         CODE_DELETER_CODE,
         [
             troposphere.iam.Policy(
@@ -181,7 +181,7 @@ def _stub_template():
     )
 
     TemplateFile(
-        "LovageCfTemplate",
+        "LovageCfnTemplate",
         template,
         ServiceToken=code_deleter.get_att("Arn"),
         Key="template.yml",
@@ -204,7 +204,7 @@ def generate_template(stack_name: str, bucket_name: str, code_key: str, requirem
 
     packager = _add_str_lambda(
         template,
-        "RequirementsPackager",
+        "LoaveRequirementsPackager",
         REQUIREMENTS_LAYER_PACKAGER_CODE,
         [
             troposphere.iam.Policy(
@@ -235,7 +235,7 @@ def generate_template(stack_name: str, bucket_name: str, code_key: str, requirem
     )
 
     package = RequirementsLayerPackage(
-        "RequirementsPackage",
+        "LovageRequirementsPackage",
         template,
         ServiceToken=packager.get_att("Arn"),
         Requirements=requirements,
@@ -253,7 +253,7 @@ def generate_template(stack_name: str, bucket_name: str, code_key: str, requirem
     )
 
     code = CodePackage(
-        "CodePackage",
+        "LovageCodePackage",
         template,
         ServiceToken=code_deleter.get_att("Arn"),
         Key=code_key,
