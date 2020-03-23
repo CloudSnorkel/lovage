@@ -15,7 +15,7 @@ class LocalBackend(base.Backend):
     def new_task(self, func: types.FunctionType, options):
         return base.Task(func, self._executor, self._serializer)
 
-    def deploy(self, *, requirements: typing.List[str], exclude=None):
+    def deploy(self, *, requirements: typing.List[str], root: str, exclude=None):
         print("Nothing to deploy when running locally")
 
 

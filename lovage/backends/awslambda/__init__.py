@@ -1,5 +1,6 @@
 import base64
 import importlib
+import inspect
 import io
 import json
 import os.path
@@ -48,6 +49,7 @@ class AwsLambdaBackend(base.Backend):
             "Handler": "lovage.backends.awslambda.__init__.aws_router",
             "Policies": options.get("aws_policies", []),
             "Kwargs": {},
+            "OriginalFunction": func,
         }
         if "timeout" in options:
             desc["Kwargs"]["Timeout"] = options["timeout"]
@@ -82,7 +84,7 @@ class AwsLambdaBackend(base.Backend):
         self._functions.append(desc)
         return base.Task(func, self._executor, self._serializer)
 
-    def deploy(self, *, requirements: typing.List[str], exclude=None):
+    def deploy(self, *, requirements: typing.List[str], root: str, exclude=None):
         # TODO allow configuration of this
         # all files in CWD
         # all files in certain directory
@@ -91,12 +93,15 @@ class AwsLambdaBackend(base.Backend):
         # .gitignore?
         # serverless way
         zs = io.BytesIO()
+        packaged_modules = set()
         with ConsistentZipFile(zs, "w") as z:
-            for root, folders, files in Dir(directory=".", excludes=exclude or [], exclude_file=".lovageignore").walk():
+            exclude = exclude or []
+            for walk_root, folders, files in Dir(directory=root, excludes=exclude, exclude_file=".lovageignore").walk():
                 for f in files:
-                    local_path = os.path.join(root, f)
+                    local_path = os.path.join(walk_root, f)
                     zip_path = os.path.relpath(local_path, '.')
                     z.add_file(local_path, zip_path)
+                    packaged_modules.add(os.path.abspath(local_path))
 
             from lovage import __version__ as lovage_version
             if lovage_version != "0.0.0":
@@ -111,15 +116,26 @@ class AwsLambdaBackend(base.Backend):
                 import lovage
                 lovage_dir = os.path.dirname(os.path.dirname(lovage.__file__))
 
-                for root, folders, files in os.walk(lovage_dir):
+                for walk_root, folders, files in os.walk(lovage_dir):
                     for f in files:
-                        local_path = os.path.join(root, f)
+                        local_path = os.path.join(walk_root, f)
                         zip_path = os.path.relpath(local_path, lovage_dir)
                         if fnmatch(zip_path, "lovage/*.py"):
                             z.add_file(local_path, zip_path)
 
         zs.seek(0)
         zip_bytes = zs.read()
+
+        missing_files = False
+        for fd in self._functions:
+            f = fd["OriginalFunction"]
+            fm = os.path.abspath(inspect.getfile(f))
+            if fm not in packaged_modules:
+                print(f"{inspect.getmodule(f).__name__}.{f.__name__} is defined in {fm} but it was not packaged")
+                missing_files = True
+
+        if missing_files:
+            raise RuntimeError(f"Some files are missing from the packaged code, is root='{root}' the correct setting?")
 
         cf.deploy(self._session, self._instance_name, zip_bytes, requirements,
                   self._functions, self._additional_resources, self._env, self._policies)

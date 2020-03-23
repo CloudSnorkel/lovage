@@ -32,7 +32,7 @@ def hello(x):
     return x + 1
 
 if __name__ == "__main__":
-    app.deploy(requirements=["requests"])
+    app.deploy(root=".", requirements=["requests"])
     print("hello.invoke(1) returned", hello.invoke(1))
 ```
 
@@ -44,6 +44,7 @@ give granular access to each function to just the resources it needs.
 ```python
 import boto3
 import lovage.backends
+import os.path
 
 app = lovage.Lovage(lovage.backends.AwsLambdaBackend("lovage-test"))
 
@@ -71,7 +72,7 @@ def send_email(x):
     boto3.client("ses").send_email(Source="info@cloudsnorkel.com", ...)
 
 if __name__ == "__main__":
-    app.deploy(requirements=["boto3==1.12.25"])
+    app.deploy(root=os.path.dirname(__file__), requirements=["boto3==1.12.25"])
     send_email.invoke_async()
 ```
 
@@ -201,6 +202,8 @@ Some configuration is platform-specific and will therefore have a prefix like `a
 
 ## Best Practices
 
+* Always specify `root` so you are sure which files are packaged. You can use something like `from pathlib import Path;
+  app.deploy(root=Path(__file__).parent.parent)` to easily get your root folder.
 * Always use `if __name__ == "__main__":` in files with Lovage tasks. Global code will be executed both locally and in
   Lambda. This may cause some unwanted side-effects.
 * You should probably have a separate script to call `app.deploy()`. No-op deploys are pretty quick, but still take time

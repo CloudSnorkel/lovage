@@ -73,5 +73,5 @@ class Backend(object):
     def new_task(self, func, options: typing.Mapping) -> Task:
         raise NotImplementedError()
 
-    def deploy(self, *, requirements: typing.List[str], exclude=None):
+    def deploy(self, *, requirements: typing.List[str], root: str, exclude=None):
         raise NotImplementedError()

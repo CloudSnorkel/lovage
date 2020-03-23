@@ -38,10 +38,11 @@ class Lovage(object):
 
         return inner_create_task_cls(**kwargs)
 
-    def deploy(self, *, requirements="", exclude=None):
+    def deploy(self, *, requirements="", root=os.getcwd(), exclude=None):
         if isinstance(requirements, str):
             requirements = [r.strip() for r in requirements.split("\n")]
-        self._backend.deploy(requirements=requirements, exclude=exclude)
+        print(f"Deploying files...\n  root={root}\n  requirements={requirements}")
+        self._backend.deploy(requirements=requirements, root=root, exclude=exclude)
 
     def is_local_backend(self):
         """
