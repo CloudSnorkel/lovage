@@ -10,6 +10,16 @@ Python-only Serverless framework that's more RPC-like and less HTTP service orie
 
 **Status:** Usable but not battle tested. PRs are welcome!
 
+## Installation
+
+Loave is a Python library with no external dependencies. Just install and use.
+
+````bash
+pip install lovage
+````
+
+You will have to set up your AWS credentials to deploy with either [environment variables](https://boto3.amazonaws.com/v1/documentation/api/latest/guide/configuration.html#environment-variables), [shared credentials files](https://boto3.amazonaws.com/v1/documentation/api/latest/guide/configuration.html#shared-credentials-file) or [any other method](https://boto3.amazonaws.com/v1/documentation/api/latest/guide/configuration.html) that works with boto3.
+
 ## Overview
 
 Lovage is a serverless framework that makes it very easy to offload normal Python functions to the cloud.
