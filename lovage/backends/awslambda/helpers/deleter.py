@@ -20,7 +20,7 @@ def handler(event, context):
 
             try:
                 boto3.client("s3").delete_object(Bucket=bucket, Key=key)
-            except botocore.exceptions.ClientError:
+            except botocore.exceptions.ClientError as e:
                 print(f"Error deleting {key}")
                 try:
                     traceback.print_last()
