@@ -31,6 +31,9 @@ use `@app.task` decorator, deploy it, and then just call the function with `.inv
 arguments, return values, and exceptions can still be used as usual. You don't need to worry about serialization or AWS
 API. Everything just works as it normally does with normal Python functions.
 
+**Note:** exceptions are only supported when using `PickleSerializer`. With the default `JSONSerializer` all exceptions
+are converted to `LovageRemoteException`.
+
 ```python
 import lovage.backends
 

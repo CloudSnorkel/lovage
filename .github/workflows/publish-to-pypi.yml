@@ -19,7 +19,8 @@ jobs:
           python-version: ${{ matrix.python-version }}
       - name: Test
         run: >-
-          python setup.py test
+          pipenv install --dev
+          pipenv run test
       - name: Build a binary wheel and a source tarball
         run: >-
           python setup.py sdist bdist_wheel

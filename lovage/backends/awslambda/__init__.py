@@ -16,6 +16,7 @@ import troposphere.awslambda
 from lovage.backends import base
 from lovage.backends.awslambda import cf
 from lovage.dirtools import Dir
+from lovage.exceptions import LovageRemoteException
 
 
 class ConsistentZipFile(zipfile.ZipFile):
@@ -32,17 +33,16 @@ class AwsLambdaBackend(base.Backend):
     def __init__(self, instance_name: str, profile_name: str = None):
         self._instance_name = instance_name
         self._functions = []
-        self._serializer = base.Serializer()  # TODO get from app
         if profile_name:
             self._session = boto3.Session(profile_name=profile_name)
         else:
             self._session = boto3.Session()
-        self._executor = AwsLambdaExecutor(instance_name, self._serializer, self._session)
+        self._executor = AwsLambdaExecutor(instance_name, self._session)
         self._additional_resources: typing.List[troposphere.BaseAWSObject] = []
         self._env: typing.Dict[str, object] = {"LOVAGE_IN_CLOUD": "1"}
         self._policies = []
 
-    def new_task(self, func, options):
+    def new_task(self, serializer: base.Serializer, func: types.FunctionType, options: typing.Mapping) -> base.Task:
         desc = {
             "Name": _func_lambda_name(func, self._instance_name),
             "CfName": _func_cf_name(func),
@@ -82,7 +82,7 @@ class AwsLambdaBackend(base.Backend):
         elif "aws_vpc_security_group_ids" in options or "aws_vpc_subnet_ids" in options:
             raise ValueError("aws_vpc_security_group_ids and aws_vpc_security_group_ids must be used together")
         self._functions.append(desc)
-        return base.Task(func, self._executor, self._serializer)
+        return base.Task(func, self._executor, serializer)
 
     def deploy(self, *, requirements: typing.List[str], root: str, exclude=None):
         # TODO allow configuration of this
@@ -159,30 +159,34 @@ class AwsLambdaBackend(base.Backend):
 
 
 class AwsLambdaExecutor(base.Executor):
-    def __init__(self, instance_name: str, serializer: base.Serializer, session: boto3.Session):
+    def __init__(self, instance_name: str, session: boto3.Session):
         self._lambda = session.client("lambda")
-        self._serializer = serializer
         self._name = instance_name
         self._exception_handler = _empty_exception_handler
 
-    def invoke(self, func: types.FunctionType, packed_args):
-        result = self._invoke(func, packed_args, "RequestResponse", 200)
+    def invoke(self, serializer: base.Serializer, func: types.FunctionType, packed_args):
+        result = self._invoke(serializer, func, packed_args, "RequestResponse", 200)
         function_result = json.loads(result["Payload"].read())
         if "exception" in function_result:
             # TODO serialize stack trace
             # exceptions coming from here are not really from here, they're from the Lambda function
-            raise self._serializer.unpack_result(base64.b85decode(function_result["exception"]))
+            exception_data = serializer.unpack_result(base64.b85decode(function_result["exception"]))
+            if serializer.objects_supported:
+                raise exception_data  # exception from the Lambda function
+            else:
+                raise LovageRemoteException.from_exception_object(exception_data)  # exception from the Lambda function
         return base64.b85decode(function_result["result"])
 
-    def invoke_async(self, func: types.FunctionType, packed_args):
-        self._invoke(func, packed_args, "Event", 202)
+    def invoke_async(self, serializer: base.Serializer, func: types.FunctionType, packed_args):
+        self._invoke(serializer, func, packed_args, "Event", 202)
 
-    def _invoke(self, func: types.FunctionType, packed_args, invocation_type, required_status_code):
+    def _invoke(self, serializer: base.Serializer, func: types.FunctionType, packed_args, invocation_type: str,
+                required_status_code: int):
         result = self._lambda.invoke(
             FunctionName=_func_lambda_name(func, self._name),
             InvocationType=invocation_type,
             Payload=json.dumps({
-                "serializer": _object_spec(self._serializer),
+                "serializer": _object_spec(serializer),
                 "function": _function_spec(func),
                 "exception_handler": _function_spec(self._exception_handler),
                 "packed_args": base64.b85encode(packed_args).decode("utf-8"),
@@ -194,10 +198,10 @@ class AwsLambdaExecutor(base.Executor):
 
         return result
 
-    def queue(self, func: types.FunctionType, packed_args):
+    def queue(self, serializer: base.Serializer, func: types.FunctionType, packed_args):
         raise NotImplementedError()
 
-    def delay(self, func: types.FunctionType, packed_args, timeout):
+    def delay(self, serializer: base.Serializer, func: types.FunctionType, packed_args, timeout):
         raise NotImplementedError()
 
 
@@ -233,6 +237,7 @@ def _empty_exception_handler(e):
 
 
 def aws_router(event, context):
+    # TODO make each task the router so we can app context and can get the real serializer, exception_handler, func, etc.
     serializer = _load_object(event["serializer"])()
     func = _load_object(event["function"])
     exception_handler = _load_object(event["exception_handler"])
@@ -241,7 +246,10 @@ def aws_router(event, context):
         result = func.call(*args, **kwargs)
     except Exception as e:
         exception_handler(e)
-        packed_e = serializer.pack_result(e)
+        if serializer.objects_supported:
+            packed_e = serializer.pack_result(e)
+        else:
+            packed_e = serializer.pack_result(LovageRemoteException.exception_object(e))
         return {"exception": base64.b85encode(packed_e).decode("utf-8")}
     packed_result = serializer.pack_result(result)
     return {"result": base64.b85encode(packed_result).decode("utf-8")}

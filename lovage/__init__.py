@@ -15,7 +15,7 @@ except pkg_resources.DistributionNotFound:
 class Lovage(object):
     def __init__(self,
                  backend: lovage.backends.base.Backend = lovage.backends.LocalBackend(),
-                 serializer: lovage.backends.base.Serializer = lovage.backends.base.Serializer()):
+                 serializer: lovage.backends.base.Serializer = lovage.backends.base.JSONSerializer()):
         self._backend = backend
         self._serializer = serializer
 
@@ -24,7 +24,7 @@ class Lovage(object):
     def task(self, *args, **kwargs) -> lovage.backends.base.Task:
         def inner_create_task_cls(**opts):
             def _create_task_cls(func):
-                task = self._backend.new_task(func, opts)
+                task = self._backend.new_task(self._serializer, func, opts)
                 return functools.update_wrapper(task, func)
 
             return _create_task_cls
