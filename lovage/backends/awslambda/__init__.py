@@ -16,7 +16,7 @@ import troposphere.awslambda
 from lovage.backends import base
 from lovage.backends.awslambda import cf
 from lovage.dirtools import Dir
-from lovage.exceptions import LovageRemoteException
+from lovage.exceptions import LovageRemoteException, LovageDeploymentException, LovageInternalException
 
 
 class ConsistentZipFile(zipfile.ZipFile):
@@ -135,7 +135,8 @@ class AwsLambdaBackend(base.Backend):
                 missing_files = True
 
         if missing_files:
-            raise RuntimeError(f"Some files are missing from the packaged code, is root='{root}' the correct setting?")
+            raise LovageDeploymentException(f"Some files are missing from the packaged code, "
+                                            f"is root='{root}' the correct setting?")
 
         cf.deploy(self._session, self._instance_name, zip_bytes, requirements,
                   self._functions, self._additional_resources, self._env, self._policies)
@@ -194,7 +195,7 @@ class AwsLambdaExecutor(base.Executor):
         )
         if result["StatusCode"] != required_status_code or result.get("FunctionError"):
             error = json.loads(result["Payload"].read())["errorMessage"]
-            raise RuntimeError(f"Unhandled Lambda error for {func.__module__}.{func.__name__}: {error}")
+            raise LovageInternalException(f"Unhandled Lambda error for {func.__module__}.{func.__name__}: {error}")
 
         return result
 

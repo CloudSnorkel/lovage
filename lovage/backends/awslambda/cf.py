@@ -13,6 +13,8 @@ import troposphere.iam
 import troposphere.logs
 import troposphere.s3
 
+from lovage.exceptions import LovageDeploymentException
+
 REQUIREMENTS_LAYER_PACKAGER_CODE = pkgutil.get_data('lovage', 'backends/awslambda/helpers/packager.py').decode('utf-8')
 CODE_DELETER_CODE = pkgutil.get_data('lovage', 'backends/awslambda/helpers/deleter.py').decode('utf-8')
 assert REQUIREMENTS_LAYER_PACKAGER_CODE and CODE_DELETER_CODE
@@ -45,7 +47,7 @@ def _get_python_runtime():
     vs = f"python{v[0]}.{v[1]}"
     if vs in ("python3.6", "python3.7", "python3.8"):
         return vs
-    raise RuntimeError(f"{vs} is not supported in AWS Lambda")
+    raise LovageDeploymentException(f"{vs} is not supported in AWS Lambda")
 
 
 def _add_lambda(template: troposphere.Template, cf_name: str, name: str, policies: typing.List[troposphere.iam.Policy],
@@ -342,7 +344,7 @@ def wait_and_log(cf, waiter, stack_name):
             for event in events_page["StackEvents"]:
                 if event["LogicalResourceId"] == stack_name and event.get("ResourceStatusReason") == "User Initiated" \
                         and event["ResourceStatus"] in ["UPDATE_IN_PROGRESS", "CREATE_IN_PROGRESS"]:
-                    raise RuntimeError(reason) from None
+                    raise LovageDeploymentException(reason) from None
                 if event["ResourceStatus"] in ["CREATE_FAILED", "DELETE_FAILED", "UPDATE_FAILED"]:
                     if not event["ResourceStatusReason"]:
                         # empty error
@@ -351,7 +353,7 @@ def wait_and_log(cf, waiter, stack_name):
                         # this "error" doesn't help debugging
                         continue
                     reason += "\n  %(LogicalResourceId)s | %(ResourceStatus)s | %(ResourceStatusReason)s" % event
-        raise RuntimeError(reason) from None
+        raise LovageDeploymentException(reason) from None
 
 
 def deploy(session: boto3.Session, stack_name: str, code_bytes: bytes, requirements: typing.List[str],

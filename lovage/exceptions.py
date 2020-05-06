@@ -3,14 +3,28 @@ import traceback
 
 class LovageException(Exception):
     """
-    Parent to all exceptions thrown by Lovage.
+    Parent to all exceptions raised by Lovage.
+    """
+    pass
+
+
+class LovageDeploymentException(LovageException):
+    """
+    Deployment related errors.
+    """
+    pass
+
+
+class LovageInternalException(LovageException):
+    """
+    Internal exception not related to user code.
     """
     pass
 
 
 class LovageRemoteException(LovageException):
     """
-    An exception describing an exception that was thrown by the remote executed function.
+    An exception describing an exception that was raised by the remote executed function.
 
     To get information about the original exception check out `exception` for the exception class name, `exception_fqn`
     for the fully qualified name, and `args` for the arguments the original exception had.

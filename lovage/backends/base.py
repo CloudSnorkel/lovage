@@ -4,6 +4,8 @@ import types
 import typing
 import warnings
 
+from lovage.exceptions import LovageException
+
 
 class Serializer(object):
     def __init__(self):
@@ -51,7 +53,7 @@ class JSONSerializer(Serializer):
             suggestion = "The default serializer doesn't support objects. If you need to pass objects, trust all the " \
                          "code that can call functions, and understand the risks of pickle, use app = lovage.Lovage(" \
                          "serializer=lovage.backends.PickleSerializer()) "
-            raise RuntimeError(suggestion) from e
+            raise LovageException(suggestion) from e  # TODO better exception type here
 
     def _deserialize(self, data: bytes) -> typing.Any:
         return json.loads(data.decode("utf-8"))

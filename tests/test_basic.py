@@ -2,7 +2,7 @@ import time
 import unittest
 
 import lovage
-from lovage.exceptions import LovageRemoteException
+from lovage.exceptions import LovageRemoteException, LovageException
 
 
 class SomeException(Exception):
@@ -96,7 +96,7 @@ class TestLocal(unittest.TestCase):
         class SomeObject(object):
             pass
 
-        with self.assertRaises(RuntimeError) as cm:
+        with self.assertRaises(LovageException) as cm:
             hello_world.invoke(SomeObject())
 
         assert "The default serializer doesn't support objects" in cm.exception.args[0]
