@@ -4,8 +4,8 @@ import types
 import typing
 import warnings
 
-from lovage.exceptions import LovageException
-
+from lovage.exceptions import LovageException, LovageConfigurationError
+from lovage.utils import is_in_cloud
 
 class Serializer(object):
     def __init__(self):
@@ -80,6 +80,10 @@ class Task(object):
         self._serializer = serializer
 
     def __call__(self, *args, **kwargs):
+        if is_in_cloud():
+            raise LovageConfigurationError("Local backend used in cloud deployment. Make sure the right cloud backend "
+                                           "is used in the code that runs in the cloud.")
+
         warnings.warn(f"{self._func.__name__} called directly. Use .invoke(), .invoke_async(), .queue() or .delay() "
                       f"to take advantage of Lovage.",
                       stacklevel=2)

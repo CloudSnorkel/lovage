@@ -8,6 +8,13 @@ class LovageException(Exception):
     pass
 
 
+class LovageConfigurationError(LovageException):
+    """
+    Lovage configuration issue detected.
+    """
+    pass
+
+
 class LovageDeploymentException(LovageException):
     """
     Deployment related errors.

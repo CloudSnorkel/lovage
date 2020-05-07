@@ -5,6 +5,7 @@ import pkg_resources
 
 import lovage.backends
 import lovage.backends.base
+import lovage.utils
 
 try:
     __version__ = pkg_resources.get_distribution('lovage').version
@@ -51,10 +52,11 @@ class Lovage(object):
         """
         return isinstance(self._backend, lovage.backends.LocalBackend)
 
-    def is_in_cloud(self):
+    @staticmethod
+    def is_in_cloud():
         """
         Checks if this code is running in a deployed Lovage stack. Useful when you have to initialize global variables
         only in deployed code.
         :return: True if running in AWS/GCP/Azure/etc.
         """
-        return os.getenv("LOVAGE_IN_CLOUD", "0") == "1"
+        return lovage.utils.is_in_cloud()
