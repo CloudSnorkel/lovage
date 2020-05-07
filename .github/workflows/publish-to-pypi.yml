@@ -19,6 +19,7 @@ jobs:
           python-version: ${{ matrix.python-version }}
       - name: Test
         run: >-
+          pip install pipenv
           pipenv install --dev
           pipenv run test
       - name: Build a binary wheel and a source tarball
