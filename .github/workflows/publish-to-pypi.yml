@@ -13,14 +13,16 @@ jobs:
 
     steps:
       - uses: actions/checkout@master
-      - name: Set up Python 3.7
+      - name: Set up Python ${{ matrix.python-version }}
         uses: actions/setup-python@v1
         with:
           python-version: ${{ matrix.python-version }}
-      - name: Test
+      - name: Test dependencies
         run: |
           pip install pipenv
-          pipenv install --dev
+          pipenv --python `which python` install --dev
+      - name: Test
+        run: |
           pipenv run test
       - name: Build a binary wheel and a source tarball
         run: |
