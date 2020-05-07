@@ -353,6 +353,7 @@ def wait_and_log(cf, waiter, stack_name):
                         # this "error" doesn't help debugging
                         continue
                     reason += "\n  %(LogicalResourceId)s | %(ResourceStatus)s | %(ResourceStatusReason)s" % event
+                    # TODO if it's a custom resource error, get the custom resource log too
         raise LovageDeploymentException(reason) from None
 
 
