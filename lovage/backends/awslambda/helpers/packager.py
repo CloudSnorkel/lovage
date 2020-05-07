@@ -4,12 +4,12 @@ import os
 import platform
 import shlex
 import shutil
-import subprocess
 import traceback
 import urllib.error
 import urllib.request
 import venv
 import zipfile
+from subprocess import run, STDOUT, PIPE
 
 import boto3
 
@@ -71,7 +71,7 @@ def handler(event, context):
                   f"-t /tmp/python --progress-bar off {requirements}"
             print(cmd)
 
-            pip_result = subprocess.run(cmd, shell=True, stdout=subprocess.PIPE, stderr=subprocess.STDOUT, text=True)
+            pip_result = run(cmd, shell=True, stdout=PIPE, stderr=STDOUT, universal_newlines=True)
             if pip_result.returncode != 0:
                 # response is limited to 4096 bytes total
                 cfn_response(event, context, FAILED, pid, None,
