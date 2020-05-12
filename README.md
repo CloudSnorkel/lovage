@@ -6,13 +6,13 @@
 [![PyPI status](https://img.shields.io/pypi/status/lovage.svg)](https://pypi.org/project/lovage/)
 [![GitHub stars](https://img.shields.io/github/stars/CloudSnorkel/lovage.svg?style=social&label=Star&maxAge=2592000)](https://GitHub.com/CloudSnorkel/lovage/stargazers/)
 
-Python-only Serverless framework that's more RPC-like and less HTTP service oriented.
+Python-only serverless library that's more RPC-like and less HTTP service oriented.
 
 **Status:** Usable but not battle tested. PRs are welcome!
 
 ## Installation
 
-Loave is a Python library with no external dependencies. Just install and use.
+Lovage is a Python library with no external dependencies. Just install and use.
 
 ````bash
 pip install lovage
@@ -22,7 +22,8 @@ You will have to set up your AWS credentials to deploy with either [environment 
 
 ## Overview
 
-Lovage is a serverless framework that makes it very easy to offload normal Python functions to the cloud.
+Lovage is a Python 3 library that makes it very easy to offload normal Python functions to the cloud using AWS Lambda
+functions.
 
 ### Call Functions Easily
 
