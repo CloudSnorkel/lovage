@@ -19,14 +19,21 @@ jobs:
           python-version: ${{ matrix.python-version }}
       - name: Test dependencies
         run: |
-          pip install pipenv
-          pipenv --python `which python` install --dev
+          pip install poetry
+          poetry install
       - name: Test
         run: |
-          pipenv run test
+          poetry run python -m pytest
+      - name: Set version from tag
+        if: startsWith(github.event.ref, 'refs/tags') && matrix.python-version == '3.7'
+        run: |
+          poetry version ${GITHUB_REF#refs/tags/}
       - name: Build a binary wheel and a source tarball
         run: |
-          python setup.py sdist bdist_wheel
+          poetry build
+      - name: Validates package metadata
+        run: |
+          poetry check
       - name: Publish distribution 📦 to PyPI
         if: startsWith(github.event.ref, 'refs/tags') && matrix.python-version == '3.7'
         uses: pypa/gh-action-pypi-publish@master

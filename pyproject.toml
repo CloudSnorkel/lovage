@@ -1,0 +1,33 @@
+[tool.poetry]
+name = "lovage"
+version = "0.0.0"
+description = "Kind of like Celery, but simpler and with more Lambda"
+license = "MIT"
+authors = ["CloudSnorkel <amir@cloudsnorkel.com>"]
+readme = "README.md"
+homepage = "https://github.com/CloudSnorkel/lovage"
+repository = "https://github.com/CloudSnorkel/lovage"
+keywords = ["celery", "queue", "task", "lambda", "serverless"]
+classifiers = [
+    "Development Status :: 3 - Alpha",
+    "License :: OSI Approved :: MIT License",
+    "Topic :: Software Development :: Libraries :: Application Frameworks",
+    "Intended Audience :: Developers",
+    "Programming Language :: Python",
+    "Programming Language :: Python :: 3.6",
+    "Programming Language :: Python :: 3.7",
+    "Programming Language :: Python :: 3.8",
+]
+
+[build-system]
+requires = ["poetry-core>=1.0.0"]
+build-backend = "poetry.core.masonry.api"
+
+[tool.poetry.dependencies]
+python = "^3.6"
+boto3 = "^1.17.38"
+troposphere = "^2.7.0"
+globster = "0.1.0"
+
+[tool.poetry.dev-dependencies]
+pytest = "^6.2.2"
